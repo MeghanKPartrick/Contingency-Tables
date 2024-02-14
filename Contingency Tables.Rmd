@@ -1,0 +1,140 @@
+---
+title: "Contingency Tables"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Page 126 Question 2
+
+```{r}
+library(faraway)
+data(melanoma, package="faraway")
+```
+
+```{r}
+#Displaying two way table
+twoway=xtabs(count~tumor+site, data=melanoma)
+twoway
+```
+
+```{r}
+#Making mosaic plot
+mosaicplot(twoway, color=TRUE, main=NULL, las=1) 
+```
+
+
+A) This does not show independance as specific tumors show a higher probability of being in certain sites. Examples of this show superficial and nodular as having a larger percentage to extremity. Freckle shows a very high percent of being on the head as well.
+
+
+```{r}
+#Checking for independence using chi squared test
+summary(twoway)
+```
+
+B) This test for independence shows a very high chi square statistic of 65.81 and a very low p-value of 2.94e-12. This means that tumor and site are clearly not independent.
+
+```{r}
+#Fitting poisson model and using it to test for independence
+melmod <-glm(count ~ tumor+site, family=poisson, data=melanoma) 
+summary(melmod)
+```
+
+C) The residual deviance is 51.795 with 6 degrees of freedom. Because these are far apart, we can conclude that tumor and site are not independent. 
+
+
+```{r}
+#Two-way table of deviance residuals
+round(xtabs(residuals(melmod) ~ tumor+site, melanoma),3) 
+```
+
+D) The larger residuals come from the freckle row as well as the superficial + head combination. The large residuals from the freckle row show an overestimation on extremity and trunk, while a severe underestimation of the head site. 
+
+
+```{r}
+#Omitting head site from data
+omithead <- melanoma[-c(1,2,3,4), ]
+```
+
+
+```{r}
+#Repeating test for independence
+melmodomit <-glm(count ~ tumor+site, family=poisson, data=omithead) 
+summary(melmodomit)
+```
+
+
+F) The residual deviance is 2.1647, while the degrees of freedom is 3. Because these values are close, we would conclude that the sites are independent using the poisson method.
+
+
+Page 127 Question 4
+
+```{r}
+data(death, package="faraway")
+help(death)
+```
+
+```{r}
+twowaydeath = xtabs(y ~ penalty+defend,death)
+twowaydeath
+```
+
+```{r}
+prop.table(twowaydeath,1)
+summary(twowaydeath)
+```
+
+```{r}
+twowaydeath_victimwhite <-xtabs(y ~ penalty+defend,data=death, subset=(victim=="w"))
+twowaydeath_victimwhite
+prop.table(twowaydeath_victimwhite,1)
+summary(twowaydeath_victimwhite)
+```
+
+```{r}
+twowaydeath_victimblack <-xtabs(y ~ penalty+defend,data=death, subset=(victim=="b"))
+twowaydeath_victimblack
+prop.table(twowaydeath_victimblack,1)
+summary(twowaydeath_victimblack)
+```
+
+
+A) This is not an example of Simpson's Paradox because marginally and conditionally, with respect to the race of the victims, the chi squared test shows that we cannot reject the null. With the null being that the decision of the death penalty is independent of the defendant's race. The observed differences in the frequency of application of the death penalty is not statistically significant.
+
+```{r}
+deathmod <-glm(y ~ penalty+defend, family=poisson, data=death) 
+summary(deathmod)
+```
+
+B) I used a Poisson model because the data amounts were not fixed and this data was observed over a period of time, counting the number of occurrences. 
+
+```{r}
+#Testing different binomial models and picking the best fit
+deathnew = subset(death, penalty == "yes")
+
+ybin = matrix(death$y, ncol=2)
+modbin = glm(ybin~victim*defend, family=binomial, data=deathnew)
+
+drop1(modbin, test="Chi")
+
+modbinr = glm(ybin~victim+defend, family=binomial, data=deathnew)
+drop1(modbinr, test="Chi")
+
+finmodbin = glm(ybin~defend, family=binomial, data=deathnew)
+```
+
+```{r}
+deviance(finmodbin)
+summary(finmodbin)
+
+deviance(deathmod)
+summary(deathmod)
+```
+
+
+C) The deviance for the binomial model is 1.881895 on two degrees of freedom, while the residual deviance is 170 on 5 degrees of freedom for the poisson model. This shows that the binomial model was a better model for this data than poisson.
+
